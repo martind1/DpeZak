@@ -1,0 +1,495 @@
+﻿@page "/hofliste"
+@page "/hofliste/{Abfrage}"
+
+@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
+@using DpeZak.Data
+@using DpeZak.Connection.DPE
+@using DpeZak.Entities.DPE
+@using Serilog;
+@using Utils;
+@using DpeZak.Kmp
+
+
+@* if (!FullScreen) dann hier auskommentieren
+*@
+@layout EmptyLayout
+<style>
+    @* kein grüner Rand um Checkbox: *@
+    .valid.modified:not([type=checkbox]) {
+        outline-style: none;
+    }
+    .vertical-center {
+        margin: 0;
+        position: absolute;
+        top: 50%;
+        -ms-transform: translateY(-50%);
+        transform: translateY(-50%);
+    }
+</style>
+<PageTitle>@lnav.Pagetitle</PageTitle>
+<BlazorTimer Seconds="@PollSeconds" Callback="Poll"></BlazorTimer>
+<div class="col-md-auto">
+    <div class="row">
+        <div class="col-md-4 align-items-center d-flex">
+            <h1>@Abfrage</h1>
+        </div>
+        @if (!string.IsNullOrEmpty(Bediener))
+        {
+            <div class="col-md-1 align-items-center d-flex">
+                <RadzenLabel Text="Bediener" />
+            </div>
+            <div class="col-md-2 align-items-center d-flex ">
+                <RadzenTextBox class="w-100" Name="Bediener" @bind-Value="Bediener" ReadOnly="true" />
+            </div>
+        }
+        <div class="col-md-5 align-items-center d-flex">
+            @*<div class="col-md-4 align-items-center d-flex">
+                    <RadzenButton Click=@BedienerPrompt Text="Anmelden" ButtonStyle="ButtonStyle.Light" />
+                </div>
+            *@
+            <div class="col-md-3 align-items-center d-flex">
+                @if (string.IsNullOrEmpty(Bediener))
+                {
+                    <RadzenLabel Text="Bitte anmelden" style="vertical-align: middle;" />
+                }
+                else
+                {
+                    <RadzenButton Click=@Abmelden Text="Abmelden" ButtonStyle="ButtonStyle.Light" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@if (string.IsNullOrEmpty(Bediener))
+{
+    <div class="container-fluid d-flex">
+        <div class="col-md-4 align-items-center ">
+
+        </div>
+        <div class="col-md-4 align-items-center" style="border: 1px solid black;">
+            <div class="form-row">
+                <div class="col-md-3 align-items-center d-flex ">
+                    <h2>Login</h2>
+                </div>
+                <div class="col-md-6 d-flex">
+                    @if (LoginError)
+                    {
+                        <RadzenLabel Text="Bediener oder Passwort falsch" Style="color: red" />
+                    }
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="col-md-3 align-items-center d-flex ">
+                    <RadzenLabel Text="Bediener" />
+                </div>
+                <div class="col-md-6">
+                    <RadzenTextBox class="w-100" Name="Bediener" @bind-Value="LoginUser" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="col-md-3 align-items-center d-flex ">
+                    <RadzenLabel Text="Passwort" />
+                </div>
+                <div class="col-md-6">
+                    <RadzenPassword class="w-100" Name="Bediener" @bind-Value="LoginPassword" />
+                </div>
+            </div>
+
+
+            <br />
+            <div class="col-md-4 align-items-center ">
+                <RadzenButton Click=@Login Text="Anmelden" ButtonStyle="ButtonStyle.Light" />
+            </div>
+            <br />
+        </div>
+        <div class="col-md-4">
+            &nbsp;
+        </div>
+    </div>
+}
+
+@if (lnav.PageState == Kmp.GlobalService.PageState.Multi && !string.IsNullOrEmpty(Bediener))
+{
+    <RadzenDataGrid @ref="grid"
+                    AllowFiltering="false"
+                    AllowPaging="false" PageSize="@pagesize"
+                    Count="@lnav.Recordcount" LoadData="@LoadData" IsLoading=@isLoading
+                    AllowVirtualization="false"
+                    Style="@gridStyle"
+                    SelectionMode="DataGridSelectionMode.Single" @bind-Value=@selectedList
+                    AllowSorting="true" AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" Sort="@OnSort"
+                    EditMode="DataGridEditMode.Single"
+                    Data="@tbl"
+                    TItem="V_LADEZETTEL">
+        <Columns>
+            <RadzenDataGridColumn TItem="V_LADEZETTEL"
+                                  Context="sampleBlazorModelsSampleOrder"
+                                  Filterable="false"
+                                  Sortable="false" TextAlign="TextAlign.Center" Width="120px">
+                <Template Context="vorf">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1"
+                                  Click="@(args => EditRow(vorf))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                    @* Works, ist aber nicht so schön Readonly Trick für Checkbox:
+                        <RadzenCheckBox onclick="return false;" @bind-Value=vorf.cfHOFL_OK Name="chbHOFL_OK"
+                            TriState="true" TValue="bool?" />
+                    *@
+                    @* primitv yber schöner: *@
+                    @if (vorf.HOFL_OK == "J")
+                    {
+                        <input type="checkbox" onclick="return false;" id="HOFL_OK_J" name="HOFL_OK_J" checked>
+                    }
+                    else if (vorf.HOFL_OK == "N")
+                    {
+                        <input type="checkbox" onclick="return false;" id="HOFL_OK_N" name="HOFL_OK_N">
+                    }
+
+                </Template>
+                <EditTemplate Context="vorf">
+                    <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Primary" Class="m-1" Click="@((args) => SaveRow(vorf))">
+                    </RadzenButton>
+                    <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@((args) => CancelEdit(vorf))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            @foreach (var col in lnav.Columnlist.SortedColumns)
+            {
+                @if (col.Fieldname == "PROBE_NR")
+                {
+                    <RadzenDataGridColumn TItem="V_LADEZETTEL"
+                                          Property="@col.Fieldname"
+                                          Title="@col.DisplayLabel"
+                                          Width="@col.WidthPx"
+                                          Visible="@col.IsVisible"
+                                          SortOrder="@col.SortOrder"
+                                          TextAlign="@col.RzTextAlign"
+                                          FormatString="@col.FormatString">
+                        <Template Context="vorf">
+                            <div style="color: red; font-weight: bold;">@vorf.PROBE_NR</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+                else
+                {
+                    <RadzenDataGridColumn TItem="V_LADEZETTEL"
+                                          Property="@col.Fieldname"
+                                          Title="@col.DisplayLabel"
+                                          Width="@col.WidthPx"
+                                          Visible="@col.IsVisible"
+                                          SortOrder="@col.SortOrder"
+                                          TextAlign="@col.RzTextAlign"
+                                          FormatString="@col.FormatString" />
+                }
+            }
+        </Columns>
+    </RadzenDataGrid>
+}
+@if (lnav.PageState == Kmp.GlobalService.PageState.Single && !string.IsNullOrEmpty(Bediener))
+{
+    <RadzenTemplateForm Data="@editRec" Submit="@((V_LADEZETTEL args) => { Submit(args); })"
+                        InvalidSubmit=@OnInvalidSubmit>
+        <div class="container-fluid">
+            <div class="form-row">
+                <!-- linke Spalte oben: -->
+                <div class="col-md-6">
+                    <RadzenFieldset Text="">
+                        <div class="form-row">
+                            <div class="col-md-3 align-items-center d-flex">
+                                <RadzenLabel Text="Quittierung" />
+                            </div>
+                            <div class="col-md-9">
+                                <RadzenSelectBar TValue="string" Name="HOFL_OK" @bind-Value=editRec.HOFL_OK
+                                                 Data="@Auswahl.aswOK" TextProperty="Value" ValueProperty="Param">
+                                </RadzenSelectBar>
+                                <RadzenRequiredValidator Component="HOFL_OK" Text="Quittierung fehlt" />
+                            </div>
+
+                            <div class="col-md-3 align-items-center d-flex">
+                                <RadzenLabel Text="Bemerkung" />
+                            </div>
+                            <div class="col-md-9">
+                                <RadzenTextBox class="w-100" Name="HOFL_KTRL" @bind-Value="editRec.HOFL_KTRL" />
+                            </div>
+
+                            @if (HasFeld("VFUE"))
+                            {
+
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Verfüllabschnitt" />
+                                </div>
+                                <div class="col-md-9">
+                                    <RadzenDropDownDataGrid TValue="string"
+                                                            @ref="cobVFUE"
+                                                            LoadData=@LuVFUE.LoadData
+                                                            AllowFiltering="false"
+                                                            @bind-Value="editRec.cfVFUE_NR"
+                                                            Data=@LuVFUE.tbl
+                                                            Count=@LuVFUE.Recordcount
+                                                            TextProperty="cfVFUE_NR"
+                                                            ValueProperty="cfVFUE_NR"
+                                                            AllowSorting="true"
+                                                            AllowColumnResize="true"
+                                                            Class="w-100">
+                                        <Columns>
+                                            @foreach (var col in LuVFUE.Columnlist.SortedColumns)
+                                            {
+                                                <RadzenDropDownDataGridColumn Property="@col.Fieldname"
+                                                                              Title="@col.DisplayLabel"
+                                                                              Width="@col.WidthPx"
+                                                                              Visible="@col.IsVisible"
+                                                                              FormatString="@col.FormatString"
+                                                                              SortOrder="@col.SortOrder" />
+                                            }
+                                        </Columns>
+                                    </RadzenDropDownDataGrid>
+                                </div>
+                            }
+                            @if (HasFeld("DKAT"))
+                            {
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Deponiekataster" />
+                                </div>
+                                <div class="col-md-9">
+                                    <RadzenDropDownDataGrid TValue="string"
+                                                            @ref="cobDKAT"
+                                                            LoadData=@LuDKAT.LoadData
+                                                            AllowFiltering="false"
+                                                            @bind-Value="editRec.DKAT_NR"
+                                                            Data=@LuDKAT.tbl
+                                                            Count=@LuDKAT.Recordcount
+                                                            TextProperty="DKAT_NR"
+                                                            ValueProperty="DKAT_NR"
+                                                            AllowSorting="true"
+                                                            AllowColumnResize="true"
+                                                            AllowVirtualization="@LuDKAT.Virtualization"
+                                                            Class="w-100">
+                                        <Columns>
+                                            @foreach (var col in LuDKAT.Columnlist.SortedColumns)
+                                            {
+                                                <RadzenDropDownDataGridColumn Property="@col.Fieldname"
+                                                                              Title="@col.DisplayLabel"
+                                                                              Width="@col.WidthPx"
+                                                                              Visible="@col.IsVisible"
+                                                                              FormatString="@col.FormatString"
+                                                                              SortOrder="@col.SortOrder" />
+                                            }
+                                        </Columns>
+                                    </RadzenDropDownDataGrid>
+
+                                </div>
+                            }
+                            @if (HasFeld("PROB"))
+                            {
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Probenahme OK, Nummer" />
+                                </div>
+                                <div class="col-md-4">
+                                    <RadzenSelectBar TValue="string" Name="PROBENAHME_OK" @bind-Value=editRec.PROBENAHME_OK
+                                                     Data="@Auswahl.aswOKStrich" TextProperty="Value" ValueProperty="Param">
+                                    </RadzenSelectBar>
+                                    @if (!string.IsNullOrEmpty(editRec.PROBE_NR))
+                                    {
+                                        <RadzenRequiredValidator Component="PROBENAHME_OK" Text="Probenahme OK fehlt" />
+                                    }
+                                </div>
+                                <div class="col-md-5">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="PROBE_NR" @bind-Value="editRec.PROBE_NR" />
+                                </div>
+                            }
+
+                            <div class="row justify-content-center">
+                                <div class="col-md-12 d-flex align-items-end justify-content-center" style="margin-top: 16px;">
+                                    <RadzenButton ButtonType="ButtonType.Submit" Icon="save" Text="Speichern" />
+                                    <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="cancel" Text="Abbrechen" style="display: inline-block; margin-left: 10px;" Click="@Cancel" />
+                                </div>
+                            </div>
+                        </div>
+                    </RadzenFieldset>
+                </div>
+
+                <!-- rechte Spalte: class="form-row" -->
+                <div class="col-md-6">
+                    <RadzenFieldset Text="">
+                        @if (HasFeld("FAHR"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Fahrzeug, Brutto, Tara" />
+                                </div>
+                                <div class="col-md-5">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="FAHR_KNZ" @bind-Value="editRec.fahr_knz"
+                                                   Style="@lnav.Columnlist["fahr_knz"].SingleStyle" />
+                                </div>
+                                <div class="col-md-2">
+                                    <RadzenNumeric class="w-100" ReadOnly="true" Name="BRGEW" @bind-Value="editRec.brgew"
+                                                   TValue="double?" ShowUpDown="false"
+                                                   Style="@lnav.Columnlist["brgew"].SingleStyle" />
+                                </div>
+                                <div class="col-md-2">
+                                    <RadzenNumeric class="w-100" ReadOnly="true" Name="TAGEW" @bind-Value="editRec.tagew"
+                                                   TValue="double?" ShowUpDown="false"
+                                                   Style="@lnav.Columnlist["tagew"].SingleStyle" />
+                                </div>
+                            </div>
+                        }
+                        @if (HasFeld("EDTM"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Eingang Datum, Zeit" />
+                                </div>
+                                <div class="col-md-4">
+                                    <RadzenDatePicker ReadOnly="true" Name="edt" DateFormat="d" @bind-Value="editRec.edt" />
+                                </div>
+                                <div class="col-md-2">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="ETm" @bind-Value="editRec.ETm" />
+                                </div>
+                            </div>
+                        }
+                        @if (HasFeld("VONR"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Beleg Nr." />
+                                </div>
+                                <div class="col-md-4">
+                                    <RadzenNumeric ReadOnly="true" Name="VORF_NR" @bind-Value=editRec.vorf_nr
+                                                   ShowUpDown="false" TValue="int" />
+                                </div>
+                            </div>
+                        }
+                        @if (HasFeld("LORT"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Lager" />
+                                </div>
+                                <div class="col-md-2">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="LAGER_NR" @bind-Value="editRec.LAGER_NR" />
+                                </div>
+                                <div class="col-md-7">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="LAGER_BEZ" @bind-Value="editRec.LAGER_BEZ" />
+                                </div>
+                            </div>
+                        }
+                        @if (HasFeld("KATA"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Kataster" />
+                                </div>
+                                <div class="col-md-2">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="KATASTER_NR" @bind-Value="editRec.KATASTER_NR" />
+                                </div>
+                                <div class="col-md-7">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="KATASTER_BEZ" @bind-Value="editRec.KATASTER_BEZ" />
+                                </div>
+                            </div>
+                        }
+                        @if (HasFeld("CHAR"))
+                        {
+                            <div class="form-row">
+                                <div class="col-md-3 align-items-center d-flex">
+                                    <RadzenLabel Text="Kompost Chargennr." />
+                                </div>
+                                <div class="col-md-5">
+                                    <RadzenTextBox class="w-100" ReadOnly="true" Name="CHARGENUMMER" @bind-Value="editRec.CHARGENUMMER" />
+                                </div>
+                            </div>
+                        }
+                    </RadzenFieldset>
+                </div>
+            </div>
+            <!-- linke Spalte unten, gesamte Breite: -->
+            <div class="col-md-auto">
+                <RadzenFieldset Text="">
+                    @if (HasFeld("MKEN"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="Materialkennung" />
+                            </div>
+                            <div class="col-md-2">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="MATKENN" @bind-Value="editRec.MATKENN" />
+                            </div>
+                            <div class="col-md-8">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="MKEN_BEZ" @bind-Value="editRec.MKEN_BEZ" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasFeld("SRTE"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="Sorte" />
+                            </div>
+                            <div class="col-md-2">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="SRTE_NR" @bind-Value="editRec.srte_nr" />
+                            </div>
+                            <div class="col-md-8">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="SRTE_BEZ" @bind-Value="editRec.srte_bez" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasFeld("AVV"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="AVV" />
+                            </div>
+                            <div class="col-md-2">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="EWC_CODE" @bind-Value="editRec.ewc_code" />
+                            </div>
+                            <div class="col-md-8">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="EWC_BEZ" @bind-Value="editRec.EWC_BEZ" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasFeld("ENTS"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="Nachweis" />
+                            </div>
+                            <div class="col-md-2">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="ENTS_NR" @bind-Value="editRec.ents_nr" />
+                            </div>
+                            <div class="col-md-2">
+                                <RadzenNumeric class="w-100" ReadOnly="true" Name="ENCH_POS" @bind-Value="editRec.ENCH_POS"
+                                               ShowUpDown="false" TValue="short?" />
+                            </div>
+                            <div class="col-md-6">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="ENCH_NAME" @bind-Value="editRec.ENCH_NAME" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasFeld("BEF"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="Beförderer" />
+                            </div>
+                            <div class="col-md-10">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="ANL_ADRE" @bind-Value="editRec.ANL_ADRE" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasFeld("ANF"))
+                    {
+                        <div class="form-row">
+                            <div class="col-md-2 align-items-center d-flex">
+                                <RadzenLabel Text="Anfallstelle" />
+                            </div>
+                            <div class="col-md-10">
+                                <RadzenTextBox class="w-100" ReadOnly="true" Name="ERZ_ADRE" @bind-Value="editRec.ERZ_ADRE" />
+                            </div>
+                        </div>
+                    }
+                </RadzenFieldset>
+            </div>
+        </div>
+    </RadzenTemplateForm>
+}

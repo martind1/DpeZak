@@ -1,0 +1,77 @@
+﻿{
+   "CodeGenerationMode": 2,
+   "ContextClassName": "DpeContext",
+   "ContextNamespace": "",
+   "DefaultDacpacSchema": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": false,
+   "ModelNamespace": "",
+   "OutputContextPath": "Connection.DPE",
+   "OutputPath": "Entities.DPE",
+   "PreserveCasingWithRegex": true,
+   "ProjectRootNamespace": "DpeZak",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 0,
+   "SelectedToBeGenerated": 0,
+   "Tables": [
+      {
+         "Name": "[dbo].[ASWS]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[DKAT]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[FLTR]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[R_Grup]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[R_INIT]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[R_Usgr]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[R_Usrs]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[VFUE]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[VORF]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[V_LADEZETTEL]",
+         "ObjectType": 3
+      }
+   ],
+   "UiHint": "BLACKI\\SQLSVR17.depoeur",
+   "UncountableWords": null,
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": true,
+   "UseDateOnlyTimeOnly": false,
+   "UseDbContextSplitting": false,
+   "UseFluentApiOnly": true,
+   "UseHandleBars": true,
+   "UseHierarchyId": false,
+   "UseInflector": false,
+   "UseLegacyPluralizer": false,
+   "UseManyToManyEntity": false,
+   "UseNoDefaultConstructor": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UseSchemaFolders": false,
+   "UseSpatial": false,
+   "UseT4": false
+}

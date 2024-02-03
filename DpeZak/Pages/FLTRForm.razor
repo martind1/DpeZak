@@ -1,0 +1,61 @@
+﻿@page "/FLTR"
+@page "/FLTR/{Abfrage}"
+
+@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
+@using DpeZak.Data
+@using DpeZak.Connection.DPE
+@using DpeZak.Entities.DPE
+@using Serilog;
+@using Utils;
+
+<PageTitle>@lnav.Pagetitle</PageTitle>
+<BlazorTimer Seconds="@PollSeconds" Callback="Poll"></BlazorTimer>
+@*<RadzenButton Icon="add_circle_outline" style="margin-bottom: 10px" Text="Add New Order" Click="@InsertRow" Disabled=@(entityToInsert != null) />
+*@
+<RadzenDataGrid @ref="grid"
+                AllowFiltering="false"
+                AllowPaging="false" PageSize="@pagesize"
+                Count="@lnav.Recordcount" LoadData="@LoadData" IsLoading=@isLoading
+                AllowVirtualization="false"
+                Style="height: calc(100vh - 170px); width: calc(100vw - 250px);"
+                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@selectedList
+                AllowSorting="true" AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" Sort="@OnSort"
+                EditMode="DataGridEditMode.Single"
+                Data="@tbl"
+                TItem="FLTR"
+                RowUpdate="@OnUpdateRow"
+                RowCreate="@OnCreateRow">
+    <Columns>
+        @foreach (var col in lnav.Columnlist.SortedColumns)
+        {
+            <RadzenDataGridColumn TItem="FLTR" Property="@col.Fieldname" Title="@col.DisplayLabel" Width="@col.WidthPx" Visible="@col.IsVisible"
+                                  SortOrder="@col.SortOrder" />
+        }
+        <RadzenDataGridColumn TItem="FLTR" Context="sampleBlazorModelsSampleOrder" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="120px">
+            <Template Context="fltr">
+                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@(args => EditRow(fltr))" @onclick:stopPropagation="true">
+                </RadzenButton>
+            </Template>
+            <EditTemplate Context="fltr">
+                <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Primary" Class="m-1" Click="@((args) => SaveRow(fltr))">
+                </RadzenButton>
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@((args) => CancelEdit(fltr))">
+                </RadzenButton>
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="FLTR" Context="FLTR" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="60px">
+            <Template Context="fltr">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(fltr))" @onclick:stopPropagation="true">
+                </RadzenButton>
+            </Template>
+            <EditTemplate Context="fltr">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(fltr))">
+                </RadzenButton>
+            </EditTemplate>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type='text/xsl' href='_MigrationReport_Files/MigrationReport.xslt'?>
+<UpgradeLog>
+<Properties>
+<Property Name="Solution" Value="D:\Blazor\Zak\ZakGroup\ZakGroup.sln"></Property>
+<Property Name="Solution File" Value="D:\Blazor\Zak\ZakGroup"></Property>
+<Property Name="Date" Value="15.09.2022 20:29:11"></Property>
+</Properties>
+
+</UpgradeLog>

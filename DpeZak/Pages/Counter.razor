@@ -1,0 +1,127 @@
+﻿@page "/counter"
+@using Serilog;
+@using Serilog.Events
+@using System.Text.RegularExpressions
+@using DpeZak.Kmp
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+<br />
+<br />
+<RadzenButton Click="@ButtonClicked" Text=@radzenText />
+<br />
+<RadzenTextBox @bind-Value=@radzenText />
+
+<br />
+<br />
+<div class="row">
+    <div class="col-md-4 align-items-center d-flex">
+        <RadzenLabel Text="Regex Expression" />
+    </div>
+    <div class="col-md-8">
+        <RadzenTextBox style="width: 100%;" @bind-Value=@Expression />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-4 align-items-center d-flex">
+        <RadzenLabel Text="Beispiel" />
+    </div>
+    <div class="col-md-8">
+        <RadzenTextBox style="width: 100%;" @bind-Value=@Beispiel />
+    </div>
+</div>
+<div>
+    <RadzenButton Click="@RegexClicked" Text="Regex.Match" />
+    <RadzenButton Click="@ReplaceClicked" Text="Regex.Replace" />
+    <RadzenTextBox style="width: 50%;" @bind-Value=@Replace />
+</div>
+<div class="row">
+    <div class="col-md-4 align-items-center d-flex">
+        <RadzenLabel Text="Ergebnis" />
+    </div>
+    <div class="col-md-8">
+        <RadzenTextArea style="width: 100%;" Class="w-100" @bind-Value=@Ergebnis />
+    </div>
+</div>
+
+@code {
+    private int currentCount = 0;
+
+    string radzenText = "Hi";
+
+    private void IncrementCount()
+    {
+        if (Log.IsEnabled(LogEventLevel.Information))
+        {
+            Log.Information($"Counter was {@currentCount}");
+        }
+        currentCount++;
+    }
+
+    void ButtonClicked()
+    {
+        radzenText = "Hallo " + currentCount;
+    }
+
+    #region regex
+
+    private string Expression;
+    private string Beispiel;
+    private string Ergebnis;
+    private string Replace;
+
+    void RegexClicked()
+    {
+        //Ergebnis = Expression + "\r\n" + Beispiel;
+        try
+        {
+            Ergebnis = "";
+            //string[] tokens = Regex.Split(Beispiel, Expression);
+            //foreach (string token in tokens)
+            //{
+            //    Ergebnis = Ergebnis + token + "\r\n";
+            //}
+            for (Match m = Regex.Match(Beispiel, Expression); m.Success; m = m.NextMatch())
+            {
+                Ergebnis = Ergebnis + m.Value + "\r\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            Ergebnis = ex.Message;
+        }
+    }
+
+    void ReplaceClicked()
+    {
+        try
+        {
+            Ergebnis = Regex.Replace(Beispiel, Expression, Replace);
+        }
+        catch (Exception ex)
+        {
+            Ergebnis = ex.Message;
+        }
+    }
+
+    #endregion
+
+    #region Navigator
+    [Inject]
+    private GlobalService GNav { get; set; }
+    LocalService<DummyEntity> lnav;
+
+    protected override void OnParametersSet()
+    {
+        lnav = new LocalService<DummyEntity>(GNav);
+        GNav.SetLNav(lnav);
+        lnav.Pagetitle = "Zähler und RegEx";  //erst hier wg Benachrichtigung
+    }
+    #endregion
+}

@@ -1,0 +1,28 @@
+﻿@inherits LayoutComponentBase
+
+<RadzenDialog/>
+<RadzenNotification/>
+<RadzenContextMenu/>
+<RadzenTooltip/>
+
+<PageTitle>ZAK Digitale Annahmekontrolle</PageTitle>
+
+<RadzenDialog />
+<RadzenNotification />
+<RadzenTooltip />
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        @*<div class="top-row px-4"> //mt-4
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        </div>*@
+        <GlobalNavigator Class="top-row px-4" />
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
